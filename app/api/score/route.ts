@@ -4,6 +4,7 @@ import { db } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin':  '*',
