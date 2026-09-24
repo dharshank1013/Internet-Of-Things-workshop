@@ -6,16 +6,7 @@ import { signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, googleProvider, db } from '@/lib/firebase';
-
-// ─── ADMIN CONFIG ──────────────────────────────────────────────────────────────
-const ADMIN_EMAILS: string[] = [
-  'dharshank24@karunya.edu.in',
-];
-const ALLOWED_STUDENT_DOMAIN = 'karunya.edu.in';
-// ──────────────────────────────────────────────────────────────────────────────
-
-const isAdmin        = (email: string) => ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email.toLowerCase());
-const isAllowedStudent = (email: string) => email.toLowerCase().endsWith(`@${ALLOWED_STUDENT_DOMAIN}`);
+import { ADMIN_EMAILS, ALLOWED_STUDENT_DOMAIN, isAdmin, isAllowedStudent } from '@/lib/auth-config';
 
 // ─── SHARED STYLES (mirrors admin page exactly) ────────────────────────────────
 const sharedStyles = `
@@ -133,7 +124,11 @@ export default function LoginPage() {
       if (user) {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
-          const role = userDoc.data().role;
+          let role = userDoc.data().role;
+          if (user.email && isAdmin(user.email) && role !== 'admin') {
+            role = 'admin';
+            await setDoc(doc(db, 'users', user.uid), { role: 'admin' }, { merge: true });
+          }
           if (role === 'admin')        router.replace('/admin');
           else if (role === 'student') router.replace('/student');
           else { await auth.signOut(); setCheckingAuth(false); }
@@ -159,7 +154,7 @@ export default function LoginPage() {
         lastLogin: new Date().toISOString(),
       });
     } else {
-      await setDoc(userRef, { lastLogin: new Date().toISOString() }, { merge: true });
+      await setDoc(userRef, { role, lastLogin: new Date().toISOString() }, { merge: true });
     }
   };
 

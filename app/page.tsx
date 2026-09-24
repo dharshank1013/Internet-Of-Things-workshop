@@ -4,8 +4,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { isAdmin } from '@/lib/auth-config';
 
 export default function RootPage() {
   const router = useRouter();
@@ -22,7 +23,11 @@ export default function RootPage() {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
 
       if (userDoc.exists()) {
-        const role = userDoc.data().role;
+        let role = userDoc.data().role;
+        if (user.email && isAdmin(user.email) && role !== 'admin') {
+          role = 'admin';
+          await setDoc(doc(db, 'users', user.uid), { role: 'admin' }, { merge: true });
+        }
         if (role === 'admin') {
           router.replace('/admin');
         } else {

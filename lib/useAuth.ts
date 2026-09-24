@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
+import { isAdmin } from '@/lib/auth-config';
 
 type Role = 'admin' | 'student' | null;
 
@@ -39,7 +40,11 @@ export function useAuth(requiredRole?: 'admin' | 'student'): AuthState {
           return;
         }
 
-        const role = userDoc.data().role as Role;
+        let role = userDoc.data().role as Role;
+        if (user.email && isAdmin(user.email) && role !== 'admin') {
+          role = 'admin';
+          await setDoc(doc(db, 'users', user.uid), { role: 'admin' }, { merge: true });
+        }
         console.log('useAuth — user role:', role, '| required:', requiredRole);
 
         // ── Wrong role → redirect to correct page ──────────────────────
